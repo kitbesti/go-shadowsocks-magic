@@ -6,9 +6,9 @@ The code is based on https://github.com/shadowsocks/go-shadowsocks2
 
 ==================================================
 
-## UPDATE 2019-10: Deprecated. [Rabbit TCP]( https://github.com/ihciah/rabbit-tcp ) is recommended.
+## UPDATE 2019-10: Deprecated. [Rabbit TCP]( https://github.com/kitbesti/rabbit-tcp ) is recommended.
 
-## 2019-10 更新: 不建议使用。请使用[Rabbit TCP]( https://github.com/ihciah/rabbit-tcp ) 。
+## 2019-10 更新: 不建议使用。请使用[Rabbit TCP]( https://github.com/kitbesti/rabbit-tcp ) 。
 
 ==================================================
 
@@ -60,12 +60,12 @@ However, it's not a problem if the `magic-child` connections interrupted.
 
 ## Install
 
-Pre-built binaries for common platforms are available at https://github.com/ihciah/go-shadowsocks-magic/releases
+Pre-built binaries for common platforms are available at https://github.com/kitbesti/go-shadowsocks-magic/releases
 
 Install from source
 
 ```sh
-go get -u -v github.com/ihciah/go-shadowsocks-magic
+go get -u -v github.com/kitbesti/go-shadowsocks-magic
 ```
 
 

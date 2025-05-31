@@ -6,7 +6,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/ihciah/go-shadowsocks-magic/socks"
+	"github.com/kitbesti/go-shadowsocks-magic/socks"
 )
 
 const (

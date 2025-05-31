@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
-	"github.com/ihciah/go-shadowsocks-magic/magic"
 	"io"
 	"log"
 	"net/url"
@@ -15,8 +14,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ihciah/go-shadowsocks-magic/core"
-	"github.com/ihciah/go-shadowsocks-magic/socks"
+	"github.com/kitbesti/go-shadowsocks-magic/magic"
+
+	"github.com/kitbesti/go-shadowsocks-magic/core"
+	"github.com/kitbesti/go-shadowsocks-magic/socks"
 )
 
 var config struct {

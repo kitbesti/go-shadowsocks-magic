@@ -1,12 +1,13 @@
 package main
 
 import (
-	"github.com/ihciah/go-shadowsocks-magic/magic"
 	"io"
 	"net"
 	"time"
 
-	"github.com/ihciah/go-shadowsocks-magic/socks"
+	"github.com/kitbesti/go-shadowsocks-magic/magic"
+
+	"github.com/kitbesti/go-shadowsocks-magic/socks"
 )
 
 // Create a SOCKS server listening on addr and proxy to server.

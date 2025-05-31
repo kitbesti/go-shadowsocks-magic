@@ -3,7 +3,7 @@ FROM golang:1.11.3-alpine3.8 AS builder
 RUN apk upgrade \
     && apk add git \
     && go get -ldflags '-w -s' \
-        github.com/ihciah/go-shadowsocks-magic
+        github.com/kitbesti/go-shadowsocks-magic
 
 FROM alpine:3.8
 

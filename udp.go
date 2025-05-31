@@ -7,7 +7,7 @@ import (
 
 	"sync"
 
-	"github.com/ihciah/go-shadowsocks-magic/socks"
+	"github.com/kitbesti/go-shadowsocks-magic/socks"
 )
 
 type mode int
