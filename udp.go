@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/kitbesti/go-shadowsocks-magic/socks"
+	"github.com/kitbesti/go-shadowsocks-magic/udpmagic"
 )
 
 type mode int
@@ -19,6 +20,21 @@ const (
 )
 
 const udpBufSize = 64 * 1024
+
+// Global UDP Magic manager
+var udpMagicManager *udpmagic.UDPMagicManager
+
+// Initialize UDP Magic manager
+func initUDPMagic() {
+	config := udpmagic.UDPMagicConfig{
+		MaxConnections: 16,
+		Timeout:        config.UDPTimeout,
+		BufferSize:     udpBufSize,
+		EnableLogging:  true,
+	}
+	udpMagicManager = udpmagic.NewUDPMagicManager(config)
+	udpMagicManager.SetLogFunc(logf)
+}
 
 // Listen on laddr for UDP packets, encrypt and send to server to reach target.
 func udpLocal(laddr, server, target string, shadow func(net.PacketConn) net.PacketConn) {
@@ -250,5 +266,53 @@ func timedCopy(dst net.PacketConn, target net.Addr, src net.PacketConn, timeout 
 		if err != nil {
 			return err
 		}
+	}
+}
+
+// UDP Magic Local - enhanced version with multiple connections
+func udpMagicLocal(laddr, server, target string, shadow func(net.PacketConn) net.PacketConn) {
+	if udpMagicManager == nil {
+		initUDPMagic()
+	}
+
+	logf("Starting UDP Magic Local: %s -> %s (target: %s)", laddr, server, target)
+
+	err := udpMagicManager.CreateUDPMagicLocal(laddr, server, shadow)
+	if err != nil {
+		logf("UDP Magic Local error: %v", err)
+		return
+	}
+}
+
+// UDP Magic Remote - enhanced version with multiple connections
+func udpMagicRemote(addr string, shadow func(net.PacketConn) net.PacketConn) {
+	if udpMagicManager == nil {
+		initUDPMagic()
+	}
+
+	logf("Starting UDP Magic Remote on: %s", addr)
+
+	err := udpMagicManager.CreateUDPMagicRemote(addr, shadow)
+	if err != nil {
+		logf("UDP Magic Remote error: %v", err)
+		return
+	}
+
+	// Keep the function running
+	select {}
+}
+
+// UDP Magic Socks Local - enhanced version for SOCKS5 UDP support
+func udpMagicSocksLocal(laddr, server string, shadow func(net.PacketConn) net.PacketConn) {
+	if udpMagicManager == nil {
+		initUDPMagic()
+	}
+
+	logf("Starting UDP Magic Socks Local: %s -> %s", laddr, server)
+
+	err := udpMagicManager.CreateUDPMagicLocal(laddr, server, shadow)
+	if err != nil {
+		logf("UDP Magic Socks Local error: %v", err)
+		return
 	}
 }

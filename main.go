@@ -23,6 +23,7 @@ import (
 var config struct {
 	Verbose    bool
 	Magic      bool
+	UDPMagic   bool
 	UDPTimeout time.Duration
 }
 
@@ -52,6 +53,7 @@ func main() {
 	}
 
 	flag.BoolVar(&config.Magic, "magic", true, "(client-only) magic mode[Provided by ihciah]")
+	flag.BoolVar(&config.UDPMagic, "udpmagic", false, "(client-only) UDP magic mode for enhanced UDP performance")
 	flag.BoolVar(&config.Verbose, "verbose", false, "verbose mode")
 	flag.StringVar(&flags.Cipher, "cipher", "AEAD_CHACHA20_POLY1305", "available ciphers: "+strings.Join(core.ListCipher(), " "))
 	flag.StringVar(&flags.Key, "key", "", "base64url-encoded key (derive from password if empty)")
@@ -110,7 +112,11 @@ func main() {
 		if flags.UDPTun != "" {
 			for _, tun := range strings.Split(flags.UDPTun, ",") {
 				p := strings.Split(tun, "=")
-				go udpLocal(p[0], addr, p[1], ciph.PacketConn)
+				//if config.UDPMagic {
+				go udpMagicLocal(p[0], addr, p[1], ciph.PacketConn)
+				//} else {
+				//	go udpLocal(p[0], addr, p[1], ciph.PacketConn)
+				//}
 			}
 		}
 
@@ -125,7 +131,11 @@ func main() {
 			socks.UDPEnabled = flags.UDPSocks
 			go socksLocalMagic(flags.Socks, addr, ciph.StreamConn)
 			if flags.UDPSocks {
-				go udpSocksLocal(flags.Socks, addr, ciph.PacketConn)
+				//if config.UDPMagic {
+				go udpMagicSocksLocal(flags.Socks, addr, ciph.PacketConn)
+				//} else {
+				//	go udpSocksLocal(flags.Socks, addr, ciph.PacketConn)
+				//}
 			}
 		}
 
@@ -154,12 +164,14 @@ func main() {
 		ciph, err := core.PickCipher(cipher, key, password)
 		if err != nil {
 			log.Fatal(err)
-		}
-
-		// Global Buffer Table
+		} // Global Buffer Table
 		GBT := make(magic.GlobalBufferTable)
 
-		go udpRemote(addr, ciph.PacketConn)
+		//if config.UDPMagic {
+		go udpMagicRemote(addr, ciph.PacketConn)
+		//} else {
+		//	go udpRemote(addr, ciph.PacketConn)
+		//}
 		go tcpRemoteMagic(addr, ciph.StreamConn, &GBT)
 	}
 
