@@ -5,9 +5,9 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
-	"github.com/ihciah/go-shadowsocks-magic/magic"
 	"io"
 	"log"
+	"net"
 	"net/url"
 	"os"
 	"os/signal"
@@ -16,12 +16,12 @@ import (
 	"time"
 
 	"github.com/ihciah/go-shadowsocks-magic/core"
+	"github.com/ihciah/go-shadowsocks-magic/magic"
 	"github.com/ihciah/go-shadowsocks-magic/socks"
 )
 
 var config struct {
 	Verbose    bool
-	Magic      bool
 	UDPTimeout time.Duration
 }
 
@@ -48,9 +48,10 @@ func main() {
 		TCPTun    string
 		UDPTun    string
 		UDPSocks  bool
+		HTTPHost  string // 新增：HTTP伪装Host
+		DNSDomain string // 新增：DNS伪装域名
 	}
 
-	flag.BoolVar(&config.Magic, "magic", true, "(client-only) magic mode[Provided by ihciah]")
 	flag.BoolVar(&config.Verbose, "verbose", false, "verbose mode")
 	flag.StringVar(&flags.Cipher, "cipher", "AEAD_CHACHA20_POLY1305", "available ciphers: "+strings.Join(core.ListCipher(), " "))
 	flag.StringVar(&flags.Key, "key", "", "base64url-encoded key (derive from password if empty)")
@@ -64,6 +65,8 @@ func main() {
 	flag.StringVar(&flags.RedirTCP6, "redir6", "", "(client-only) redirect TCP IPv6 from this address")
 	flag.StringVar(&flags.TCPTun, "tcptun", "", "(client-only) TCP tunnel (laddr1=raddr1,laddr2=raddr2,...)")
 	flag.StringVar(&flags.UDPTun, "udptun", "", "(client-only) UDP tunnel (laddr1=raddr1,laddr2=raddr2,...)")
+	flag.StringVar(&flags.HTTPHost, "http-host", "www.example.com", "HTTP伪装Host") // 新增
+	flag.StringVar(&flags.DNSDomain, "dns-domain", "example.com", "DNS伪装域名")      // 新增
 	flag.DurationVar(&config.UDPTimeout, "udptimeout", 5*time.Minute, "UDP tunnel timeout")
 	flag.Parse()
 
@@ -109,39 +112,31 @@ func main() {
 		if flags.UDPTun != "" {
 			for _, tun := range strings.Split(flags.UDPTun, ",") {
 				p := strings.Split(tun, "=")
-				go udpLocal(p[0], addr, p[1], ciph.PacketConn)
+				go udpLocalWithMask(p[0], addr, p[1], ciph.PacketConn, flags.DNSDomain)
 			}
 		}
 
 		if flags.TCPTun != "" {
 			for _, tun := range strings.Split(flags.TCPTun, ",") {
 				p := strings.Split(tun, "=")
-				if config.Magic {
-					go tcpTun(p[0], addr, p[1], ciph.StreamConn)
-				} else {
-					go tcpTunMagic(p[0], addr, p[1], ciph.StreamConn)
-				}
+				go tcpTunMagicWithMask(p[0], addr, p[1], ciph.StreamConn, flags.HTTPHost)
 			}
 		}
 
 		if flags.Socks != "" {
 			socks.UDPEnabled = flags.UDPSocks
-			if config.Magic {
-				go socksLocalMagic(flags.Socks, addr, ciph.StreamConn)
-			} else {
-				go socksLocal(flags.Socks, addr, ciph.StreamConn)
-			}
+			go socksLocalMagicWithMask(flags.Socks, addr, ciph.StreamConn, flags.HTTPHost)
 			if flags.UDPSocks {
-				go udpSocksLocal(flags.Socks, addr, ciph.PacketConn)
+				go udpSocksLocalWithMask(flags.Socks, addr, ciph.PacketConn, flags.DNSDomain)
 			}
 		}
 
 		if flags.RedirTCP != "" {
-			go redirLocal(flags.RedirTCP, addr, ciph.StreamConn)
+			go redirLocalWithMask(flags.RedirTCP, addr, ciph.StreamConn, flags.HTTPHost)
 		}
 
 		if flags.RedirTCP6 != "" {
-			go redir6Local(flags.RedirTCP6, addr, ciph.StreamConn)
+			go redir6LocalWithMask(flags.RedirTCP6, addr, ciph.StreamConn, flags.HTTPHost)
 		}
 	}
 
@@ -166,8 +161,8 @@ func main() {
 		// Global Buffer Table
 		GBT := make(magic.GlobalBufferTable)
 
-		go udpRemote(addr, ciph.PacketConn)
-		go tcpRemoteMagic(addr, ciph.StreamConn, &GBT)
+		go udpRemoteWithMask(addr, ciph.PacketConn, flags.DNSDomain)
+		go tcpRemoteMagicWithMask(addr, ciph.StreamConn, &GBT, flags.HTTPHost)
 	}
 
 	sigCh := make(chan os.Signal, 1)
@@ -187,4 +182,50 @@ func parseURL(s string) (addr, cipher, password string, err error) {
 		password, _ = u.User.Password()
 	}
 	return
+}
+
+// 新增：带伪装参数的入口函数
+func udpLocalWithMask(laddr, server, target string, shadow func(net.PacketConn) net.PacketConn, dnsDomain string) {
+	udpLocalMask(laddr, server, target, shadow, dnsDomain)
+}
+
+func udpSocksLocalWithMask(laddr, server string, shadow func(net.PacketConn) net.PacketConn, dnsDomain string) {
+	udpSocksLocalMask(laddr, server, shadow, dnsDomain)
+}
+
+func udpRemoteWithMask(addr string, shadow func(net.PacketConn) net.PacketConn, dnsDomain string) {
+	udpRemoteMask(addr, shadow, dnsDomain)
+}
+
+func tcpTunMagicWithMask(addr, server, target string, shadow func(net.Conn) net.Conn, httpHost string) {
+	tcpTunMagicMask(addr, server, target, shadow, httpHost)
+}
+
+func socksLocalMagicWithMask(addr, server string, shadow func(net.Conn) net.Conn, httpHost string) {
+	socksLocalMagicMask(addr, server, shadow, httpHost)
+}
+
+func redirLocalWithMask(addr, server string, shadow func(net.Conn) net.Conn, httpHost string) {
+	redirLocalMask(addr, server, shadow, httpHost)
+}
+
+func redir6LocalWithMask(addr, server string, shadow func(net.Conn) net.Conn, httpHost string) {
+	redir6LocalMask(addr, server, shadow, httpHost)
+}
+
+func tcpRemoteMagicWithMask(addr string, shadow func(net.Conn) net.Conn, GBT *magic.GlobalBufferTable, httpHost string) {
+	tcpRemoteMagicMask(addr, shadow, GBT, httpHost)
+}
+
+// 生成标准DNS查询头部
+func buildDNSHeader(domain string) []byte {
+	// 以 www.[domain] 查询A记录为例
+	labels := strings.Split(domain, ".")
+	dns := []byte{0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 'w', 'w', 'w'}
+	for _, l := range labels {
+		dns = append(dns, byte(len(l)))
+		dns = append(dns, []byte(l)...)
+	}
+	dns = append(dns, 0x00, 0x00, 0x01, 0x00, 0x01)
+	return dns
 }

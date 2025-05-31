@@ -8,6 +8,10 @@ import (
 
 // Fetch remote resource into GBT and treat the main connection as a normal child connection
 func RelayRemoteMain(localConn, remoteConn net.Conn, GBT *GlobalBufferTable, logf func(f string, v ...interface{})) {
+	// 读取并丢弃 HTTP 明文头部
+	buf := make([]byte, 512)
+	localConn.Read(buf) // 简单丢弃首包伪装头
+
 	k := GBT.New()
 	defer GBT.Free(k)
 	_, err := localConn.Write(k[:])
@@ -57,6 +61,10 @@ func RelayRemoteMain(localConn, remoteConn net.Conn, GBT *GlobalBufferTable, log
 
 // Send block data
 func RelayRemoteChild(localConnChild net.Conn, dataKey [16]byte, GBT *GlobalBufferTable, logf func(f string, v ...interface{})) (int64, error) {
+	// 读取并丢弃 HTTP 明文头部
+	buf := make([]byte, 512)
+	localConnChild.Read(buf)
+
 	logf("child thread start")
 	bufferNode, ok := (*GBT)[dataKey]
 	if !ok {

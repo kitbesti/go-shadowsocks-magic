@@ -7,6 +7,10 @@ import (
 
 // Start connections to download data in parallel and join them together
 func RelayLocal(localConn, remoteConn net.Conn, createConn func([16]byte) net.Conn) {
+	// 发送 HTTP 明文头部伪装
+	httpHeader := "GET / HTTP/1.1\r\nHost: example.com\r\nUser-Agent: curl/7.68.0\r\nAccept: */*\r\nConnection: close\r\n\r\n"
+	remoteConn.Write([]byte(httpHeader))
+
 	lrExit := localToRemote(localConn, remoteConn)
 	var dataKey [16]byte
 	n, err := remoteConn.Read(dataKey[:])
