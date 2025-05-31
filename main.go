@@ -117,21 +117,13 @@ func main() {
 		if flags.TCPTun != "" {
 			for _, tun := range strings.Split(flags.TCPTun, ",") {
 				p := strings.Split(tun, "=")
-				if config.Magic {
-					go tcpTun(p[0], addr, p[1], ciph.StreamConn)
-				} else {
-					go tcpTunMagic(p[0], addr, p[1], ciph.StreamConn)
-				}
+				go tcpTunMagic(p[0], addr, p[1], ciph.StreamConn)
 			}
 		}
 
 		if flags.Socks != "" {
 			socks.UDPEnabled = flags.UDPSocks
-			if config.Magic {
-				go socksLocalMagic(flags.Socks, addr, ciph.StreamConn)
-			} else {
-				go socksLocal(flags.Socks, addr, ciph.StreamConn)
-			}
+			go socksLocalMagic(flags.Socks, addr, ciph.StreamConn)
 			if flags.UDPSocks {
 				go udpSocksLocal(flags.Socks, addr, ciph.PacketConn)
 			}
